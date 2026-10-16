@@ -38,7 +38,7 @@ function puestaEnCero() {
     document.getElementById('palabraActual').innerText = "-";
 }
 
-// --- 5. INICIO DEL DICTADO CON RITMO EXACTO POR PALABRA ---
+// --- 5. INICIO DEL DICTADO CON RITMO EXACTO Y ACTUALIZACIÓN VISUAL ---
 function iniciarLectura() {
     if (palabras.length === 0) {
         alert("Primero carga o pega un texto.");
@@ -57,7 +57,7 @@ function iniciarLectura() {
 function siguientePalabraRitmoExacto() {
     if (!reproduciendo || palabraIndex >= palabras.length) {
         if (palabraIndex >= palabras.length) {
-            // Esperar un segundo y detener al terminar la última palabra
+            // Pausar un segundo al finalizar y limpiar
             setTimeout(detenerLectura, 1000);
         }
         return;
@@ -65,27 +65,26 @@ function siguientePalabraRitmoExacto() {
 
     const palabraActual = palabras[palabraIndex];
     
-    // Actualizar interfaz visual
+    // --- ACTUALIZACIÓN VISUAL EN TIEMPO REAL ---
     document.getElementById('palabraActual').innerText = palabraActual;
     document.getElementById('lblPalabras').innerText = `Palabras leídas: ${palabraIndex + 1} / ${palabras.length}`;
 
-    // Pronunciar solo la palabra actual de manera limpia
+    // Pronunciar la palabra actual de forma limpia mediante la síntesis de voz nativa
     if (synth) {
-        synth.cancel(); // Limpiar cola anterior
+        synth.cancel(); // Limpia la cola anterior de audio
         let utterance = new SpeechSynthesisUtterance(palabraActual);
         utterance.lang = 'es-AR';
-        utterance.rate = 1.0; // Velocidad normal de locución por palabra
+        utterance.rate = 1.0; // Velocidad natural para la locución de la palabra individual
         synth.speak(utterance);
     }
 
     palabraIndex++;
 
-    // CÁLCULO MATEMÁTICO ESTRICTO DE TIEMPO POR PALABRA:
-    // Si velocidadActual es X palabras por minuto, cada palabra debe tardar (60 / X) segundos.
-    // Lo pasamos a milisegundos multiplicando por 1000.
+    // --- CÁLCULO MATEMÁTICO ESTRICTO DE TIEMPO POR PALABRA ---
+    // Fórmula exacta: (60 segundos / Palabras Por Minuto) * 1000 milisegundos
     const milisegundosPorPalabra = (60 / velocidadActual) * 1000;
 
-    // Programar el llamado a la siguiente palabra respetando el cronómetro exacto
+    // Programa la siguiente ejecución respetando el compás exacto de las PPM
     timeoutPalabra = setTimeout(siguientePalabraRitmoExacto, milisegundosPorPalabra);
 }
 
