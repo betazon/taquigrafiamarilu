@@ -1,12 +1,12 @@
 // --- 1. CONFIGURACIÓN INICIAL Y VARIABLES GLOBALES ---
-let synth = window.speechSynthesis; // Motor de voz nativo del navegador (ideal para Safari en iPhone)
-let utterance = null;               // Contiene el texto y propiedades del dictado actual
-let palabras = [];                  // Array donde se guardan todas las palabras del texto separadas
-let palabraIndex = 0;               // Índice para llevar el control de la palabra actual
-let reproduciendo = false;          // Bandera de estado de reproducción
-let tiempoInicio = 0;               // Marca temporal de inicio para el cronómetro
-let timerInterval = null;           // Control del intervalo del reloj en pantalla
-let velocidadActual = 75;           // Velocidad por defecto en Palabras Por Minuto (PPM)
+let synth = window.speechSynthesis;
+let palabras = [];
+let palabraIndex = 0;
+let reproduciendo = false;
+let tiempoInicio = 0;
+let timerInterval = null;
+let velocidadActual = 75;
+let timeoutPalabra = null;
 
 // --- 2. CONTROL DE VELOCIDAD (SLIDER) ---
 function actualizarVelocidad(val) {
@@ -22,7 +22,6 @@ function cargarTexto() {
         alert("Por favor ingresa o pega un texto.");
         return;
     }
-    // Divide el texto usando espacios o saltos de línea como separadores
     palabras = texto.split(/\s+/);
     palabraIndex = 0;
     document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${palabras.length}`;
@@ -39,7 +38,7 @@ function puestaEnCero() {
     document.getElementById('palabraActual').innerText = "-";
 }
 
-// --- 5. INICIO DEL DICTADO ---
+// --- 5. INICIO DEL DICTADO CON RITMO EXACTO POR PALABRA ---
 function iniciarLectura() {
     if (palabras.length === 0) {
         alert("Primero carga o pega un texto.");
@@ -48,45 +47,56 @@ function iniciarLectura() {
     if (reproduciendo) return;
 
     reproduciendo = true;
-    const textoCompleto = palabras.slice(palabraIndex).join(" ");
-    utterance = new SpeechSynthesisUtterance(textoCompleto);
-    utterance.lang = 'es-AR'; // Español Argentina
-
-    // CALORIMETRÍA EXACTA DE PPM:
-    // Base estándar de 135 PPM para que la proporción respete el tiempo real del cronómetro.
-    const velocidadBaseNormal = 135; 
-    let factorVelocidad = velocidadActual / velocidadBaseNormal;
-
-    // Limitamos los valores para que el sintetizador funcione sin problemas
-    utterance.rate = Math.max(0.1, Math.min(2.0, factorVelocidad));
-
-    utterance.onboundary = (event) => {
-        if (event.name === 'word') {
-            if (palabraIndex < palabras.length) {
-                document.getElementById('palabraActual').innerText = palabras[palabraIndex];
-                document.getElementById('lblPalabras').innerText = `Palabras leídas: ${palabraIndex + 1} / ${palabras.length}`;
-                palabraIndex++;
-            }
-        }
-    };
-
-    utterance.onend = () => {
-        detenerLectura();
-    };
-
+    palabraIndex = 0;
     tiempoInicio = Date.now();
     timerInterval = setInterval(actualizarCronometro, 1000);
 
-    synth.speak(utterance);
+    siguientePalabraRitmoExacto();
+}
+
+function siguientePalabraRitmoExacto() {
+    if (!reproduciendo || palabraIndex >= palabras.length) {
+        if (palabraIndex >= palabras.length) {
+            // Esperar un segundo y detener al terminar la última palabra
+            setTimeout(detenerLectura, 1000);
+        }
+        return;
+    }
+
+    const palabraActual = palabras[palabraIndex];
+    
+    // Actualizar interfaz visual
+    document.getElementById('palabraActual').innerText = palabraActual;
+    document.getElementById('lblPalabras').innerText = `Palabras leídas: ${palabraIndex + 1} / ${palabras.length}`;
+
+    // Pronunciar solo la palabra actual de manera limpia
+    if (synth) {
+        synth.cancel(); // Limpiar cola anterior
+        let utterance = new SpeechSynthesisUtterance(palabraActual);
+        utterance.lang = 'es-AR';
+        utterance.rate = 1.0; // Velocidad normal de locución por palabra
+        synth.speak(utterance);
+    }
+
+    palabraIndex++;
+
+    // CÁLCULO MATEMÁTICO ESTRICTO DE TIEMPO POR PALABRA:
+    // Si velocidadActual es X palabras por minuto, cada palabra debe tardar (60 / X) segundos.
+    // Lo pasamos a milisegundos multiplicando por 1000.
+    const milisegundosPorPalabra = (60 / velocidadActual) * 1000;
+
+    // Programar el llamado a la siguiente palabra respetando el cronómetro exacto
+    timeoutPalabra = setTimeout(siguientePalabraRitmoExacto, milisegundosPorPalabra);
 }
 
 // --- 6. DETENCIÓN DE LA REPRODUCCIÓN ---
 function detenerLectura() {
     reproduciendo = false;
     if (synth) {
-        synth.cancel(); // Cancela cualquier síntesis de voz activa
+        synth.cancel();
     }
-    clearInterval(timerInterval); // Detiene el reloj
+    clearInterval(timerInterval);
+    clearTimeout(timeoutPalabra);
 }
 
 // --- 7. ACTUALIZACIÓN DEL CRONÓMETRO ---
