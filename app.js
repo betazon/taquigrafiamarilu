@@ -52,16 +52,17 @@ function iniciarLectura() {
     utterance = new SpeechSynthesisUtterance(textoCompleto);
     utterance.lang = 'es-AR'; // Español Argentina
 
-    // CALIBRACIÓN FINANCIADA DE VELOCIDAD:
-    // Ajustado con divisor de 130 para que las velocidades de práctica (ej. 50-60 PPM) 
-    // realenticen de forma correcta y fiel el motor de voz del celular.
-    utterance.rate = Math.max(0.25, Math.min(1.5, velocidadActual / 130));
+    // CALORIMETRÍA EXACTA DE PPM:
+    // Base estándar de 135 PPM para que la proporción respete el tiempo real del cronómetro.
+    const velocidadBaseNormal = 135; 
+    let factorVelocidad = velocidadActual / velocidadBaseNormal;
 
-    // Evento que se dispara cada vez que el sintetizador pronuncia una palabra
+    // Limitamos los valores para que el sintetizador funcione sin problemas
+    utterance.rate = Math.max(0.1, Math.min(2.0, factorVelocidad));
+
     utterance.onboundary = (event) => {
         if (event.name === 'word') {
             if (palabraIndex < palabras.length) {
-                // Actualiza en pantalla la palabra actual y el contador numérico
                 document.getElementById('palabraActual').innerText = palabras[palabraIndex];
                 document.getElementById('lblPalabras').innerText = `Palabras leídas: ${palabraIndex + 1} / ${palabras.length}`;
                 palabraIndex++;
@@ -69,16 +70,13 @@ function iniciarLectura() {
         }
     };
 
-    // Al terminar de leer todo el texto de forma natural
     utterance.onend = () => {
         detenerLectura();
     };
 
-    // Arranca el cronómetro digital
     tiempoInicio = Date.now();
     timerInterval = setInterval(actualizarCronometro, 1000);
 
-    // Ordena al navegador reproducir la voz
     synth.speak(utterance);
 }
 
