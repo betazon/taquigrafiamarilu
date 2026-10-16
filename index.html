@@ -34,9 +34,13 @@
     </div>
 
     <div class="card">
-        <label><strong>Pegar texto del ejercicio o cargar:</strong></label>
-        <textarea id="textoEjercicio" placeholder="Pega aquí el bloque de 90 palabras..."></textarea>
-        <button onclick="cargarTexto()">Cargar Texto</button>
+    <label><strong>Seleccionar Ejercicio de Práctica:</strong></label>
+    <select id="selectorEjercicios" onchange="cargarEjercicioPreset(this.value)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 15px; margin-top: 5px;">
+        <option value="">-- Selecciona un ejercicio --</option>
+        <option value="ejercicios/ejercicio1.txt">Ejercicio 1 (Boletín Oficial)</option>
+        <option value="ejercicios/ejercicio2.txt">Ejercicio 2 (Práctica 80 PPM)</option>
+        <option value="ejercicios/ejercicio3.txt">Ejercicio 3 (Vocabulario avanzado)</option>
+    </select>
     </div>
 
     <div class="card">
