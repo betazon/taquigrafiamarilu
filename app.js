@@ -6,7 +6,7 @@ let palabraIndex = 0;
 let reproduciendo = false;
 let tiempoInicio = 0;
 let timerInterval = null;
-let lecturaInterval = null; // Controla el avance sincronizado de las palabras
+let lecturaInterval = null;
 let velocidadActual = 75;
 
 // Configurar el worker de PDF.js
@@ -17,13 +17,13 @@ function actualizarVelocidad(val) {
     velocidadActual = parseInt(val);
     document.getElementById('lblVelocidad').innerText = `Velocidad: ${velocidadActual} PPM`;
     
-    // Si ya está reproduciendo y cambia la velocidad, ajustamos el intervalo al vuelo
+    // Si ya está reproduciendo, ajustamos el intervalo con la nueva velocidad
     if (reproduciendo) {
-        reiniciarIntervaloLectura();
+        iniciarIntervaloLectura();
     }
 }
 
-// --- 3. CARGAR PDF DIRECTO DESDE EL CELULAR (WHATSAPP / ARCHIVOS) ---
+// --- 3. CARGAR PDF DIRECTO DESDE EL CELULAR ---
 async function cargarPdfMovil(event) {
     const archivo = event.target.files[0];
     if (!archivo) return;
@@ -37,7 +37,6 @@ async function cargarPdfMovil(event) {
         
         let textoCompleto = "";
 
-        // Extraer texto de todas las páginas del PDF
         for (let i = 1; i <= pdfDoc.numPages; i++) {
             const pagina = await pdfDoc.getPage(i);
             const contenido = await pagina.getTextContent();
@@ -56,6 +55,7 @@ async function cargarPdfMovil(event) {
         
         document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${palabras.length}`;
         document.getElementById('palabraActual').innerText = "-";
+        actualizarTextoLeidoUI();
         
         alert(`PDF cargado con éxito (${palabras.length} palabras). ¡Listo para practicar!`);
 
@@ -73,9 +73,10 @@ function puestaEnCero() {
     document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${total}`;
     document.getElementById('lblTiempo').innerText = "Tiempo: 00:00";
     document.getElementById('palabraActual').innerText = "-";
+    actualizarTextoLeidoUI();
 }
 
-// --- 5. INICIO DEL DICTADO CON LECTURA FLUIDA Y SINCRONIZADA ---
+// --- 5. INICIO DEL DICTADO ---
 function iniciarLectura() {
     if (palabras.length === 0) {
         alert("Primero selecciona un archivo PDF.");
@@ -88,13 +89,11 @@ function iniciarLectura() {
         palabraIndex = 0;
     }
 
-    // Unimos todas las palabras restantes para que el navegador las lea de corrido
     const textoCompleto = palabras.slice(palabraIndex).join(" ");
     
     utterance = new SpeechSynthesisUtterance(textoCompleto);
     utterance.lang = 'es-AR'; // Español Argentina
 
-    // CALIBRACIÓN DE FLUIDEZ:
     const baseNormalNavegador = 125;
     let factorFluido = velocidadActual / baseNormalNavegador;
     utterance.rate = Math.max(0.3, Math.min(1.5, factorFluido));
@@ -103,21 +102,16 @@ function iniciarLectura() {
         detenerLectura();
     };
 
-    // Arranca el cronómetro digital
     tiempoInicio = Date.now();
     timerInterval = setInterval(actualizarCronometro, 1000);
 
-    // Inicia la voz del navegador
     synth.speak(utterance);
-
-    // Sincronizador visual basado en la velocidad (PPM)
     iniciarIntervaloLectura();
 }
 
 function iniciarIntervaloLectura() {
     if (lecturaInterval) clearInterval(lecturaInterval);
 
-    // Calcular milisegundos por palabra según los PPM configurados (60000 ms / PPM)
     const msPorPalabra = (60 / velocidadActual) * 1000;
 
     lecturaInterval = setInterval(() => {
@@ -127,6 +121,7 @@ function iniciarIntervaloLectura() {
             document.getElementById('palabraActual').innerText = palabras[palabraIndex];
             document.getElementById('lblPalabras').innerText = `Palabras leídas: ${palabraIndex + 1} / ${palabras.length}`;
             palabraIndex++;
+            actualizarTextoLeidoUI();
         } else {
             detenerLectura();
         }
@@ -143,7 +138,7 @@ function detenerLectura() {
     clearInterval(lecturaInterval);
 }
 
-// --- 7. ACTUALIZACIÓN DEL CRONÓMETRO ---
+// --- 7. CRONÓMETRO ---
 function actualizarCronometro() {
     const transcurrido = Math.floor((Date.now() - tiempoInicio) / 1000);
     const minutos = String(Math.floor(transcurrido / 60)).padStart(2, '0');
@@ -151,7 +146,46 @@ function actualizarCronometro() {
     document.getElementById('lblTiempo').innerText = `Tiempo: ${minutos}:${segundos}`;
 }
 
-// --- 8. REGISTRO DEL SERVICE WORKER (PWA) ---
+// --- 8. MOSTRAR / OCULTAR Y ACTUALIZAR TEXTO LEÍDO ---
+function toggleTextoLeido() {
+    const box = document.getElementById('boxTextoLeido');
+    if (box.style.display === 'block') {
+        box.style.display = 'none';
+    } else {
+        box.style.display = 'block';
+        actualizarTextoLeidoUI();
+    }
+}
+
+function actualizarTextoLeidoUI() {
+    const box = document.getElementById('boxTextoLeido');
+    if (palabras.length === 0) {
+        box.innerHTML = '<em>No hay ningún PDF cargado.</em>';
+        return;
+    }
+
+    if (palabraIndex === 0) {
+        box.innerHTML = '<em>El dictado aún no ha comenzado.</em>';
+        return;
+    }
+
+    const textoHastaAhora = palabras.slice(0, palabraIndex).join(' ');
+    box.innerText = textoHastaAhora;
+    box.scrollTop = box.scrollHeight;
+}
+
+// --- 9. CONFIGURACIÓN AUTOMÁTICA DEL SLIDER AL INICIAR ---
+window.addEventListener('DOMContentLoaded', () => {
+    const slider = document.getElementById('rangeVelocidad');
+    if (slider) {
+        slider.min = 60;   // Establecemos un límite mínimo acorde al rendimiento del navegador
+        slider.max = 180;  // Máximo
+        slider.value = 75; // Valor inicial por defecto para Marilú
+        actualizarVelocidad(75);
+    }
+});
+
+// --- 10. SERVICE WORKER ---
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');
 }
