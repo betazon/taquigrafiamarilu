@@ -17,7 +17,6 @@ function actualizarVelocidad(val) {
     velocidadActual = parseInt(val);
     document.getElementById('lblVelocidad').innerText = `Velocidad: ${velocidadActual} PPM`;
     
-    // Si ya está reproduciendo, ajustamos el intervalo con la nueva velocidad
     if (reproduciendo) {
         iniciarIntervaloLectura();
     }
@@ -55,7 +54,7 @@ async function cargarPdfMovil(event) {
         
         document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${palabras.length}`;
         document.getElementById('palabraActual').innerText = "-";
-        actualizarTextoLeidoUI();
+        document.getElementById('boxTextoCompleto').innerText = palabras.join(" ");
         
         alert(`PDF cargado con éxito (${palabras.length} palabras). ¡Listo para practicar!`);
 
@@ -73,7 +72,6 @@ function puestaEnCero() {
     document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${total}`;
     document.getElementById('lblTiempo').innerText = "Tiempo: 00:00";
     document.getElementById('palabraActual').innerText = "-";
-    actualizarTextoLeidoUI();
 }
 
 // --- 5. INICIO DEL DICTADO ---
@@ -92,7 +90,7 @@ function iniciarLectura() {
     const textoCompleto = palabras.slice(palabraIndex).join(" ");
     
     utterance = new SpeechSynthesisUtterance(textoCompleto);
-    utterance.lang = 'es-AR'; // Español Argentina
+    utterance.lang = 'es-AR';
 
     const baseNormalNavegador = 125;
     let factorFluido = velocidadActual / baseNormalNavegador;
@@ -121,7 +119,6 @@ function iniciarIntervaloLectura() {
             document.getElementById('palabraActual').innerText = palabras[palabraIndex];
             document.getElementById('lblPalabras').innerText = `Palabras leídas: ${palabraIndex + 1} / ${palabras.length}`;
             palabraIndex++;
-            actualizarTextoLeidoUI();
         } else {
             detenerLectura();
         }
@@ -146,41 +143,28 @@ function actualizarCronometro() {
     document.getElementById('lblTiempo').innerText = `Tiempo: ${minutos}:${segundos}`;
 }
 
-// --- 8. MOSTRAR / OCULTAR Y ACTUALIZAR TEXTO LEÍDO ---
-function toggleTextoLeido() {
-    const box = document.getElementById('boxTextoLeido');
+// --- 8. MOSTRAR / OCULTAR EL TEXTO CARGADO ---
+function mostrarTextoCargado() {
+    const box = document.getElementById('boxTextoCompleto');
+    if (palabras.length === 0) {
+        alert("Primero selecciona un archivo PDF.");
+        return;
+    }
+
     if (box.style.display === 'block') {
         box.style.display = 'none';
     } else {
         box.style.display = 'block';
-        actualizarTextoLeidoUI();
     }
 }
 
-function actualizarTextoLeidoUI() {
-    const box = document.getElementById('boxTextoLeido');
-    if (palabras.length === 0) {
-        box.innerHTML = '<em>No hay ningún PDF cargado.</em>';
-        return;
-    }
-
-    if (palabraIndex === 0) {
-        box.innerHTML = '<em>El dictado aún no ha comenzado.</em>';
-        return;
-    }
-
-    const textoHastaAhora = palabras.slice(0, palabraIndex).join(' ');
-    box.innerText = textoHastaAhora;
-    box.scrollTop = box.scrollHeight;
-}
-
-// --- 9. CONFIGURACIÓN AUTOMÁTICA DEL SLIDER AL INICIAR ---
+// --- 9. CONFIGURACIÓN DEL SLIDER AL INICIAR ---
 window.addEventListener('DOMContentLoaded', () => {
     const slider = document.getElementById('rangeVelocidad');
     if (slider) {
-        slider.min = 60;   // Establecemos un límite mínimo acorde al rendimiento del navegador
-        slider.max = 180;  // Máximo
-        slider.value = 75; // Valor inicial por defecto para Marilú
+        slider.min = 60;
+        slider.max = 180;
+        slider.value = 75;
         actualizarVelocidad(75);
     }
 });
