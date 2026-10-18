@@ -8,63 +8,63 @@ let tiempoInicio = 0;
 let timerInterval = null;
 let velocidadActual = 75;
 
+// Configurar el worker de PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
 // --- 2. CONTROL DE VELOCIDAD (SLIDER) ---
 function actualizarVelocidad(val) {
     velocidadActual = parseInt(val);
     document.getElementById('lblVelocidad').innerText = `Velocidad: ${velocidadActual} PPM`;
 }
 
-// --- 3. CARGAR EJERCICIO DESDE EL MENÚ DESPLEGABLE (IDEAL PARA iPHONE) ---
-function cargarEjercicioPreset(rutaArchivo) {
-    if (!rutaArchivo) return;
-    
+// --- 3. CARGAR PDF DIRECTO DESDE EL CELULAR (WHATSAPP / ARCHIVOS) ---
+async function cargarPdfMovil(event) {
+    const archivo = event.target.files[0];
+    if (!archivo) return;
+
     detenerLectura();
 
-    // Descarga el archivo de texto seleccionado de la carpeta del proyecto
-    fetch(rutaArchivo)
-        .then(response => {
-            if (!response.ok) throw new Error("No se pudo cargar el archivo.");
-            return response.text();
-        })
-        .then(texto => {
-            const textoLimpio = texto.trim();
-            palabras = textoLimpio.split(/\s+/);
-            palabraIndex = 0;
-            
-            document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${palabras.length}`;
-            document.getElementById('palabraActual').innerText = "-";
-            
-            alert(`Ejercicio cargado con éxito (${palabras.length} palabras). ¡Listo para practicar!`);
-        })
-        .catch(error => {
-            alert("Error al cargar el ejercicio. Verifica que el archivo exista en la carpeta 'ejercicios'.");
-            console.error(error);
-        });
-}
+    try {
+        const arrayBuffer = await archivo.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdfDoc = await loadingTask.promise;
+        
+        let textoCompleto = "";
 
-// (Opcional) Mantener compatibilidad por si querés pegar texto manualmente desde la PC
-function cargarTexto() {
-    detenerLectura();
-    const textoElemento = document.getElementById('textoEjercicio');
-    if (!textoElemento) return;
-    
-    const texto = textoElemento.value.trim();
-    if (!texto) {
-        alert("Por favor ingresa o pega un texto.");
-        return;
+        // Extraer texto de todas las páginas del PDF
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+            const pagina = await pdfDoc.getPage(i);
+            const contenido = await pagina.getTextContent();
+            const textItems = contenido.items.map(item => item.str);
+            textoCompleto += textItems.join(" ") + " ";
+        }
+
+        const textoLimpio = textoCompleto.trim();
+        if (!textoLimpio) {
+            alert("El PDF parece estar vacío o protegido.");
+            return;
+        }
+
+        palabras = textoLimpio.split(/\s+/);
+        palabraIndex = 0;
+        
+        document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${palabras.length}`;
+        document.getElementById('palabraActual').innerText = "-";
+        
+        alert(`PDF cargado con éxito (${palabras.length} palabras). ¡Listo para practicar!`);
+
+    } catch (error) {
+        alert("Error al leer el archivo PDF. Asegúrate de que sea un archivo válido.");
+        console.error(error);
     }
-    palabras = texto.split(/\s+/);
-    palabraIndex = 0;
-    document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${palabras.length}`;
-    document.getElementById('palabraActual').innerText = "-";
-    alert(`Texto cargado correctamente (${palabras.length} palabras).`);
 }
 
 // --- 4. REINICIO DE CONTADORES ---
 function puestaEnCero() {
     detenerLectura();
     palabraIndex = 0;
-    document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${palabras.length if palabras.length > 0 else 0}`;
+    const total = palabras.length > 0 ? palabras.length : 0;
+    document.getElementById('lblPalabras').innerText = `Palabras leídas: 0 / ${total}`;
     document.getElementById('lblTiempo').innerText = "Tiempo: 00:00";
     document.getElementById('palabraActual').innerText = "-";
 }
@@ -72,7 +72,7 @@ function puestaEnCero() {
 // --- 5. INICIO DEL DICTADO CON LECTURA FLUIDA Y NATURAL ---
 function iniciarLectura() {
     if (palabras.length === 0) {
-        alert("Primero selecciona o carga un ejercicio.");
+        alert("Primero selecciona un archivo PDF.");
         return;
     }
     if (reproduciendo) return;
