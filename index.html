@@ -20,10 +20,12 @@
         button.reset { background: #FF9800; }
         button.view-text { background: #673AB7; } /* Botón violeta para ver el texto */
         .stats { text-align: center; font-size: 16px; font-weight: bold; margin: 10px 0; }
-        .word-box { background: #e3f2fd; padding: 10px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; color: #1565c0; min-height: 24px; }
-        .range-container { margin: 10px 0; }
-        input[type=range] { width: 100%; }
-        input[type=file] { width: 100%; padding: 8px; box-sizing: border-box; font-size: 14px; margin-top: 5px; }
+        .word-box { background: #e3f2fd; padding: 10px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; color: #1565c0; min-height: 24px; margin-bottom: 15px; }
+        
+        /* Estilos explícitos para asegurar que el slider se vea perfecto */
+        .range-container { margin: 15px 0; background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        .range-container label { display: block; margin-bottom: 8px; font-weight: bold; color: #1565c0; font-size: 15px; }
+        input[type=range] { width: 100%; height: 8px; background: #d3d3d3; outline: none; border-radius: 4px; }
         
         .text-preview {
             display: none;
@@ -57,8 +59,9 @@
     </div>
 
     <div class="card">
+        <!-- Contenedor visible y estilizado para el Slider de Velocidad -->
         <div class="range-container">
-            <label id="lblVelocidad" style="font-weight: bold; color: #1565c0;">Velocidad actual: 75 PPM</label>
+            <label id="lblVelocidad">Velocidad actual: 75 PPM</label>
             <input type="range" id="rangeVelocidad" min="60" max="180" value="75" oninput="actualizarVelocidad(this.value)" onchange="actualizarVelocidad(this.value)">
         </div>
 
