@@ -58,8 +58,8 @@
 
     <div class="card">
         <div class="range-container">
-            <label id="lblVelocidad">Velocidad: 75 PPM</label>
-            <input type="range" id="rangeVelocidad" min="60" max="180" value="75" oninput="actualizarVelocidad(this.value)">
+            <label id="lblVelocidad" style="font-weight: bold; color: #1565c0;">Velocidad actual: 75 PPM</label>
+            <input type="range" id="rangeVelocidad" min="60" max="180" value="75" oninput="actualizarVelocidad(this.value)" onchange="actualizarVelocidad(this.value)">
         </div>
 
         <div class="stats">

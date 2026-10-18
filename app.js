@@ -14,9 +14,21 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 
 // --- 2. CONTROL DE VELOCIDAD (SLIDER) ---
 function actualizarVelocidad(val) {
-    velocidadActual = parseInt(val);
-    document.getElementById('lblVelocidad').innerText = `Velocidad: ${velocidadActual} PPM`;
+    velocidadActual = parseInt(val, 10);
     
+    // Sincronizamos el elemento visual del slider
+    const slider = document.getElementById('rangeVelocidad');
+    if (slider && parseInt(slider.value, 10) !== velocidadActual) {
+        slider.value = velocidadActual;
+    }
+
+    // Mostramos la velocidad actual claramente en la etiqueta
+    const lbl = document.getElementById('lblVelocidad');
+    if (lbl) {
+        lbl.innerText = `Velocidad actual: ${velocidadActual} PPM`;
+    }
+    
+    // Si la lectura está en marcha, ajustamos el intervalo al instante
     if (reproduciendo) {
         iniciarIntervaloLectura();
     }
@@ -164,8 +176,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (slider) {
         slider.min = 60;
         slider.max = 180;
-        slider.value = 75;
-        actualizarVelocidad(75);
+        const valorInicial = slider.value ? parseInt(slider.value, 10) : 75;
+        actualizarVelocidad(valorInicial);
     }
 });
 
