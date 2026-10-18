@@ -6,6 +6,7 @@ let palabraIndex = 0;
 let reproduciendo = false;
 let tiempoInicio = 0;
 let timerInterval = null;
+let lecturaInterval = null; // Controla el avance sincronizado de las palabras
 let velocidadActual = 75;
 
 // Configurar el worker de PDF.js
@@ -15,6 +16,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 function actualizarVelocidad(val) {
     velocidadActual = parseInt(val);
     document.getElementById('lblVelocidad').innerText = `Velocidad: ${velocidadActual} PPM`;
+    
+    // Si ya está reproduciendo y cambia la velocidad, ajustamos el intervalo al vuelo
+    if (reproduciendo) {
+        reiniciarIntervaloLectura();
+    }
 }
 
 // --- 3. CARGAR PDF DIRECTO DESDE EL CELULAR (WHATSAPP / ARCHIVOS) ---
@@ -69,7 +75,7 @@ function puestaEnCero() {
     document.getElementById('palabraActual').innerText = "-";
 }
 
-// --- 5. INICIO DEL DICTADO CON LECTURA FLUIDA Y NATURAL ---
+// --- 5. INICIO DEL DICTADO CON LECTURA FLUIDA Y SINCRONIZADA ---
 function iniciarLectura() {
     if (palabras.length === 0) {
         alert("Primero selecciona un archivo PDF.");
@@ -78,32 +84,20 @@ function iniciarLectura() {
     if (reproduciendo) return;
 
     reproduciendo = true;
-    palabraIndex = 0;
+    if (palabraIndex >= palabras.length) {
+        palabraIndex = 0;
+    }
 
-    // Unimos todas las palabras restantes para que el navegador las lea de corrido de forma natural
+    // Unimos todas las palabras restantes para que el navegador las lea de corrido
     const textoCompleto = palabras.slice(palabraIndex).join(" ");
     
     utterance = new SpeechSynthesisUtterance(textoCompleto);
     utterance.lang = 'es-AR'; // Español Argentina
 
     // CALIBRACIÓN DE FLUIDEZ:
-    // Base normal del navegador de 125 PPM para una locución humana y fluida
     const baseNormalNavegador = 125;
     let factorFluido = velocidadActual / baseNormalNavegador;
-    
-    // Limitamos los extremos para asegurar compatibilidad total en iOS (Safari)
     utterance.rate = Math.max(0.3, Math.min(1.5, factorFluido));
-
-    // Evento nativo del navegador para rastrear el avance palabra por palabra en tiempo real
-    utterance.onboundary = (event) => {
-        if (event.name === 'word') {
-            if (palabraIndex < palabras.length) {
-                document.getElementById('palabraActual').innerText = palabras[palabraIndex];
-                document.getElementById('lblPalabras').innerText = `Palabras leídas: ${palabraIndex + 1} / ${palabras.length}`;
-                palabraIndex++;
-            }
-        }
-    };
 
     utterance.onend = () => {
         detenerLectura();
@@ -113,8 +107,30 @@ function iniciarLectura() {
     tiempoInicio = Date.now();
     timerInterval = setInterval(actualizarCronometro, 1000);
 
-    // Reproduce la locución fluida
+    // Inicia la voz del navegador
     synth.speak(utterance);
+
+    // Sincronizador visual basado en la velocidad (PPM)
+    iniciarIntervaloLectura();
+}
+
+function iniciarIntervaloLectura() {
+    if (lecturaInterval) clearInterval(lecturaInterval);
+
+    // Calcular milisegundos por palabra según los PPM configurados (60000 ms / PPM)
+    const msPorPalabra = (60 / velocidadActual) * 1000;
+
+    lecturaInterval = setInterval(() => {
+        if (!reproduciendo) return;
+
+        if (palabraIndex < palabras.length) {
+            document.getElementById('palabraActual').innerText = palabras[palabraIndex];
+            document.getElementById('lblPalabras').innerText = `Palabras leídas: ${palabraIndex + 1} / ${palabras.length}`;
+            palabraIndex++;
+        } else {
+            detenerLectura();
+        }
+    }, msPorPalabra);
 }
 
 // --- 6. DETENCIÓN DE LA REPRODUCCIÓN ---
@@ -124,6 +140,7 @@ function detenerLectura() {
         synth.cancel();
     }
     clearInterval(timerInterval);
+    clearInterval(lecturaInterval);
 }
 
 // --- 7. ACTUALIZACIÓN DEL CRONÓMETRO ---
